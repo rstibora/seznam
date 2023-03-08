@@ -1,0 +1,19 @@
+services:
+  seznam-db-service:
+    build: ./db-service
+    image: seznam/db
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - SEZNAM_DB_PASSWORD=${SEZNAM_DB_PASSWORD}
+    ports:
+    - 5432:5432
+  seznam-backend-service:
+    build: ./backend-service
+    image: seznam/backend
+    volumes:
+      - ./backend-service:/seznam/
+    environment:
+      - SEZNAM_DB_PASSWORD=${SEZNAM_DB_PASSWORD}
+    command: poetry run python ./seznam/seznam_django/manage.py runserver 0.0.0.0:8000
+    ports:
+      - 8000:8000
