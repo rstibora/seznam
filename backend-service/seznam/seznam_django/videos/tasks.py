@@ -1,9 +1,11 @@
-from collections.abc import Iterable
+from datetime import datetime, timedelta, timezone
 
+from celery import shared_task
+from django.utils import timezone
 from pydantic import BaseModel, Field
 import requests
 
-from ..models import Video
+from videos.models import Video, FetchMetadata
 
 
 VIDEOS_URL = ("https://gist.githubusercontent.com/nextsux/f6e0327857c88caedd2dab13affb72c1"
@@ -20,7 +22,14 @@ class VideoMetadata(BaseModel):
     descritption: str = ""
 
 
-def fetch_videos_metadata() -> Iterable[VideoMetadata]:
+@shared_task
+def fetch_and_store_metadata() -> None:
+    fetch_metadata = FetchMetadata.load()
+
+    # Data is fresh, no need to fetch.
+    if fetch_metadata.data_expires_at and fetch_metadata.data_expires_at > timezone.now():
+        return
+
     response = requests.get(VIDEOS_URL)
 
     if not response.ok:
@@ -31,14 +40,19 @@ def fetch_videos_metadata() -> Iterable[VideoMetadata]:
     except requests.exceptions.JSONDecodeError:
         raise FetchFailed("Could not parse videos metadata json.")
 
-    return (VideoMetadata.parse_obj(video_json) for video_json in response_json)
+    video_metadata = (VideoMetadata.parse_obj(video_json) for video_json in response_json)
 
-
-def store_videos_metadata(metadata: Iterable[VideoMetadata]) -> None:
     Video.objects.all().delete()
     Video.objects.bulk_create([
         Video(
             name=video_metadata.name,
             short_name=video_metadata.short_name,
             description=video_metadata.descritption)
-        for video_metadata in metadata])
+        for video_metadata in video_metadata])
+
+    fetch_metadata.data_expires_at = timezone.now() + timedelta(minutes=5)
+    if (expires_header := response.headers.get("expires")) is not None:
+        fetch_metadata.data_expires_at = timezone.make_aware(
+            datetime.strptime(expires_header, "%a, %d %b %Y %H:%M:%S GMT"),
+            timezone.utc)
+    fetch_metadata.save()

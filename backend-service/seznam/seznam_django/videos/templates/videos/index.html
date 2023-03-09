@@ -1,18 +1,14 @@
-{% if object_list %}
-    <table>
+<table>
+    <tr>
+        <th>Name</th>
+        <th>Short Name</th>
+        <th>Description</th>
+    </tr>
+    {% for object in object_list %}
         <tr>
-            <th>Name</th>
-            <th>Short Name</th>
-            <th>Description</th>
+            <td>{{ object.name }}</td>
+            <td>{{ object.short_name }}</td>
+            <td>{{ object.description }}</td>
         </tr>
-        {% for object in object_list %}
-            <tr>
-                <td>{{ object.name }}</td>
-                <td>{{ object.short_name }}</td>
-                <td>{{ object.description }}</td>
-            </tr>
-        {% endfor %}
-    </table>
-{% else %}
-    No videos for you
-{% endif %}
+    {% endfor %}
+</table>

@@ -1,5 +1,5 @@
 services:
-  seznam-db-service:
+  db:
     build: ./db-service
     image: seznam/db
     environment:
@@ -7,7 +7,7 @@ services:
       - SEZNAM_DB_PASSWORD=${SEZNAM_DB_PASSWORD}
     ports:
     - 5432:5432
-  seznam-backend-service:
+  django:
     build: ./backend-service
     image: seznam/backend
     volumes:
@@ -17,3 +17,23 @@ services:
     command: poetry run python ./seznam/seznam_django/manage.py runserver 0.0.0.0:8000
     ports:
       - 8000:8000
+    depends_on:
+      - redis
+  redis:
+    image: redis:7
+  celery:
+    build: ./backend-service
+    volumes:
+      - ./backend-service:/seznam/
+    command: poetry run celery --workdir ./seznam/seznam_django -A seznam_django worker -l info
+    depends_on:
+      - redis
+    environment:
+      - SEZNAM_DB_PASSWORD=${SEZNAM_DB_PASSWORD}
+  celery-beat:
+    build: ./backend-service
+    volumes:
+      - ./backend-service:/seznam/
+    command: poetry run celery --workdir ./seznam/seznam_django -A seznam_django beat -l info
+    depends_on:
+      - redis

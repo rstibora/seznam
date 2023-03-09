@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 from os import environ
 from pathlib import Path
 
+from celery.schedules import crontab
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -69,7 +71,7 @@ WSGI_APPLICATION = 'seznam_django.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'HOST': 'seznam-db-service',
+        'HOST': 'db',
         'NAME': 'seznam',
         'USER': 'seznam',
         'PASSWORD': environ.get('SEZNAM_DB_PASSWORD')
@@ -117,3 +119,13 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CELERY_BROKER_URL = "redis://redis:6379"
+CELERY_RESULT_BACKEND = "redis://redis:6379"
+
+CELERY_BEAT_SCHEDULE = {
+    "fetch_and_store_metadata": {
+        "task": "videos.tasks.fetch_and_store_metadata",
+        "schedule": crontab(minute="*/1"),
+    },
+}
