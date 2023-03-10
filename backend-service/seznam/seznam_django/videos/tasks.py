@@ -28,14 +28,7 @@ class MetadataModel(BaseModel):
     features: list[str]
 
 
-@shared_task
-def check_fetch_store_metadata() -> None:
-    fetch_metadata = FetchMetadata.load()
-
-    # Data is fresh, no need to fetch.
-    if fetch_metadata.data_expires_at and fetch_metadata.data_expires_at > timezone.now():
-        return
-
+def _update_metadata() -> None:
     response = requests.get(VIDEOS_URL)
 
     if not response.ok:
@@ -75,9 +68,20 @@ def check_fetch_store_metadata() -> None:
                 metadata.drms.set(drms)
             metadata.save()
 
+    fetch_metadata = FetchMetadata.load()
     fetch_metadata.data_expires_at = timezone.now() + timedelta(minutes=5)
     if (expires_header := response.headers.get("expires")) is not None:
         fetch_metadata.data_expires_at = timezone.make_aware(
             datetime.strptime(expires_header, "%a, %d %b %Y %H:%M:%S GMT"),
             timezone.utc)
     fetch_metadata.save()
+
+
+@shared_task
+def check_fetch_store_metadata() -> None:
+    fetch_metadata = FetchMetadata.load()
+
+    # Data is fresh, no need to fetch.
+    if fetch_metadata.data_expires_at and fetch_metadata.data_expires_at > timezone.now():
+        return
+    _update_metadata()
