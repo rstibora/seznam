@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
-from itertools import chain
 
 from celery import shared_task
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from pydantic import BaseModel, Field
 import requests
@@ -48,34 +48,32 @@ def fetch_and_store_metadata() -> None:
 
     video_metadata_models_and_jsons = [(MetadataModel.parse_obj(video_json), video_json)
                                        for video_json in response_json]
-    video_features = set(
-        chain(*(video_metadata_model.features for video_metadata_model, _ in video_metadata_models_and_jsons)))
-    video_drms = set(
-        chain(*(video_metadata_model.drm for video_metadata_model, _ in video_metadata_models_and_jsons)))
 
-    Feature.objects.all().delete()
-    Feature.objects.bulk_create(Feature(name=feature) for feature in video_features)
-
-    Drm.objects.all().delete()
-    Drm.objects.bulk_create(Drm(name=drm) for drm in video_drms)
-
-    Metadata.objects.all().delete()
     for video_metadata, complete_json in video_metadata_models_and_jsons:
-        features = (Feature.objects.get_or_create(name=feature)[0] for feature in video_metadata.features)
-        drms = (Drm.objects.get_or_create(name=drm)[0] for drm in video_metadata.drm)
-        metadata = Metadata.objects.create(
-            name=video_metadata.name,
-            short_name=video_metadata.short_name,
-            icon_uri=video_metadata.icon_uri,
-            manifest_uri=video_metadata.manifest_uri,
-            description=video_metadata.descritption,
-            is_featured=video_metadata.is_featured,
-            complete_json=complete_json)
-        if features:
-            metadata.features.set(features)
-        if drms:
-            metadata.drms.set(drms)
-        metadata.save()
+        # Since there is not unique identifier in the json, it is assumed that if the json
+        # stays the same (postgres comparison wise), the object is the same. Otherwise, we got
+        # different object.
+        # This is problematic as either the db will grow endlessly or objects will be deleted udner
+        # while still being observed (e.g. the details view).
+        try:
+            Metadata.objects.get(complete_json=complete_json)
+            continue
+        except ObjectDoesNotExist:
+            features = (Feature.objects.get_or_create(name=feature)[0] for feature in video_metadata.features)
+            drms = (Drm.objects.get_or_create(name=drm)[0] for drm in video_metadata.drm)
+            metadata = Metadata.objects.create(
+                name=video_metadata.name,
+                short_name=video_metadata.short_name,
+                icon_uri=video_metadata.icon_uri,
+                manifest_uri=video_metadata.manifest_uri,
+                description=video_metadata.descritption,
+                is_featured=video_metadata.is_featured,
+                complete_json=complete_json)
+            if features:
+                metadata.features.set(features)
+            if drms:
+                metadata.drms.set(drms)
+            metadata.save()
 
     fetch_metadata.data_expires_at = timezone.now() + timedelta(minutes=5)
     if (expires_header := response.headers.get("expires")) is not None:

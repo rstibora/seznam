@@ -1,4 +1,5 @@
-from typing import Any, Dict, Sequence
+import json
+from typing import Any, Dict
 
 from django.db.models import Q
 from django.views import generic
@@ -10,23 +11,33 @@ from .tasks import fetch_and_store_metadata
 class IndexView(generic.ListView):
     template_name = "videos/index.html"
 
-    def get_ordering(self) -> Sequence[str]:
+    def get_queryset(self):
         order_string = self.request.GET.get("order", "asc")
         order_prefix = "" if order_string == "asc" else "-"
 
         order_by = self.request.GET.get("order_by", "name")
-        return [f"{order_prefix}{order_by}"]
 
-    def get_queryset(self):
         is_featured = self.request.GET.get("is_featured", None)
-        drms = [drm.removeprefix("filter_drm_") for drm in self.request.GET.keys() if drm.startswith("filter_drm_")]
-        features = [feature.removeprefix("filter_feature_") for feature in self.request.GET.keys() if feature.startswith("filter_feature_")]
+        drms = [drm.removeprefix("filter_drm_")
+                for drm in self.request.GET.keys() if drm.startswith("filter_drm_")]
+        features = [feature.removeprefix("filter_feature_")
+                    for feature in self.request.GET.keys() if feature.startswith("filter_feature_")]
 
         is_featured_q = Q(is_featured=True) if is_featured is not None else ~Q(pk__in=[])
         drms_q = Q(drms__name__in=drms) if drms else ~Q(pk__in=[])
         features_q = Q(features__name__in=features) if features else ~Q(pk__in=[])
 
-        return Metadata.objects.all().filter(is_featured_q & drms_q & features_q)
+        json_search = self.request.GET.get("json_search", None)
+        json_search_q = ~Q(pk__in=[])
+        if json_search := self.request.GET.get("json_search", None):
+            try:
+                json_search_q = Q(**{
+                    f"complete_json__{json_search.split('=')[0]}": json.loads('{"key":' + json_search.split("=")[1] + '}')["key"]})
+            except json.JSONDecodeError:
+                raise Exception(f"The query '{json_search}' was not correct.")
+
+        return Metadata.objects.all().filter(is_featured_q & drms_q & features_q & json_search_q).order_by(
+            f"{order_prefix}{order_by}")
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context_data = super().get_context_data(**kwargs)

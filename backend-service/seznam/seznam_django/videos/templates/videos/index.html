@@ -24,7 +24,7 @@
                     {% endfor %}
                 </fieldset>
 
-                <fieldset class="flex flex-col flex-wrap px-2 grow w-fit border-solid border-r-2 border-slate-200 px-2">
+                <fieldset class="flex flex-col flex-wrap grow w-fit border-solid border-r-2 border-slate-200 px-2">
                     {% for feature in all_features %}
                         <div class="flex flex-row">
                             <input id="is_feature_"{{ feature }} name="filter_feature_{{ feature }}" type="checkbox">
@@ -32,6 +32,11 @@
                         </div>
                     {% endfor %}
                 </fieldset>
+                <textarea
+                    name="json_search"
+                    class="w-80 w-fit border-solid border-r-2 border-slate-200 px-2"
+                    placeholder="Full json search, use Django JSONField query syntax with json values after '=' (i.e. 'isFeatured=true')"
+                ></textarea>
                 <button class="px-2 font-bold">Submit</button>
             </form>
         </div>
