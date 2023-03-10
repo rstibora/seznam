@@ -10,24 +10,28 @@
             <table class="w-full">
                 <tr class="bg-slate-700 text-slate-200 p-2">
                     <th></th>
+                    <th class="max-w-2">
+                        Short Name
+                        <a href="{% url 'index' %}?sort_by=short_name&order=asc"> &uarr;</a>
+                        <a href="{% url 'index' %}?sort_by=short_name&order=desc"> &darr;</a>
+                    </th>
                     <th>
                         Name
                         <a href="{% url 'index' %}?sort_by=name&order=asc"> &uarr;</a>
                         <a href="{% url 'index' %}?sort_by=name&order=desc"> &darr;</a>
                     </th>
-                    <th>
-                        Short Name
-                        <a href="{% url 'index' %}?sort_by=short_name&order=asc"> &uarr;</a>
-                        <a href="{% url 'index' %}?sort_by=short_name&order=desc"> &darr;</a>
-                    </th>
-                    <th>Description</th>
+                    <th>Featured</th>
+                    <th>DRM</th>
+                    <th>Features</th>
                 </tr>
                 {% for video in object_list %}
                     <tr class="bg-white odd:bg-slate-100 p-2">
                         <td><img class="max-h-16" src="https://storage.googleapis.com/shaka-asset-icons/dark_truth.png"></td>
-                        <td>{{ video.name }}</td>
                         <td>{{ video.short_name }}</td>
-                        <td>{{ video.description }}</td>
+                        <td>{{ video.name }}</td>
+                        <td>{{ video.is_featured }}</td>
+                        <td>{% for drm in video.drms.all %}{{ drm.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+                        <td>{% for feature in video.features.all %}{{ feature.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
                     </tr>
                 {% endfor %}
             </table>

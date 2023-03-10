@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta, timezone
+from itertools import chain
 
 from celery import shared_task
 from django.utils import timezone
 from pydantic import BaseModel, Field
 import requests
 
-from videos.models import Video, FetchMetadata
+from videos.models import Drm, Feature, FetchMetadata, Metadata
 
 
 VIDEOS_URL = ("https://gist.githubusercontent.com/nextsux/f6e0327857c88caedd2dab13affb72c1"
@@ -16,10 +17,15 @@ class FetchFailed(Exception):
     pass
 
 
-class VideoMetadata(BaseModel):
+class MetadataModel(BaseModel):
     name: str
-    short_name: str = Field(alias="shortName")
+    short_name: str = Field(alias="shortName", default="")
+    icon_uri: str = Field(alias="iconUri", default="")
+    manifest_uri: str = Field(alias="manifestUri", default="")
     descritption: str = ""
+    is_featured: bool = Field(alias="isFeatured")
+    drm: list[str]
+    features: list[str]
 
 
 @shared_task
@@ -40,15 +46,36 @@ def fetch_and_store_metadata() -> None:
     except requests.exceptions.JSONDecodeError:
         raise FetchFailed("Could not parse videos metadata json.")
 
-    video_metadata = (VideoMetadata.parse_obj(video_json) for video_json in response_json)
+    video_metadata_models_and_jsons = [(MetadataModel.parse_obj(video_json), video_json)
+                                       for video_json in response_json]
+    video_features = set(
+        chain(*(video_metadata_model.features for video_metadata_model, _ in video_metadata_models_and_jsons)))
+    video_drms = set(
+        chain(*(video_metadata_model.drm for video_metadata_model, _ in video_metadata_models_and_jsons)))
 
-    Video.objects.all().delete()
-    Video.objects.bulk_create([
-        Video(
+    Feature.objects.all().delete()
+    Feature.objects.bulk_create(Feature(name=feature) for feature in video_features)
+
+    Drm.objects.all().delete()
+    Drm.objects.bulk_create(Drm(name=drm) for drm in video_drms)
+
+    Metadata.objects.all().delete()
+    for video_metadata, complete_json in video_metadata_models_and_jsons:
+        features = (Feature.objects.get_or_create(name=feature)[0] for feature in video_metadata.features)
+        drms = (Drm.objects.get_or_create(name=drm)[0] for drm in video_metadata.drm)
+        metadata = Metadata.objects.create(
             name=video_metadata.name,
             short_name=video_metadata.short_name,
-            description=video_metadata.descritption)
-        for video_metadata in video_metadata])
+            icon_uri=video_metadata.icon_uri,
+            manifest_uri=video_metadata.manifest_uri,
+            description=video_metadata.descritption,
+            is_featured=video_metadata.is_featured,
+            complete_json=complete_json)
+        if features:
+            metadata.features.set(features)
+        if drms:
+            metadata.drms.set(drms)
+        metadata.save()
 
     fetch_metadata.data_expires_at = timezone.now() + timedelta(minutes=5)
     if (expires_header := response.headers.get("expires")) is not None:
