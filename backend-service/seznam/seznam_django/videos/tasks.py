@@ -29,7 +29,7 @@ class MetadataModel(BaseModel):
 
 
 @shared_task
-def fetch_and_store_metadata() -> None:
+def check_fetch_store_metadata() -> None:
     fetch_metadata = FetchMetadata.load()
 
     # Data is fresh, no need to fetch.
@@ -50,10 +50,10 @@ def fetch_and_store_metadata() -> None:
                                        for video_json in response_json]
 
     for video_metadata, complete_json in video_metadata_models_and_jsons:
-        # Since there is not unique identifier in the json, it is assumed that if the json
+        # Since there is no unique identifier in the json, it is assumed that if the json
         # stays the same (postgres comparison wise), the object is the same. Otherwise, we got
-        # different object.
-        # This is problematic as either the db will grow endlessly or objects will be deleted udner
+        # a different object.
+        # This is problematic as either the db will grow endlessly or objects will be deleted
         # while still being observed (e.g. the details view).
         try:
             Metadata.objects.get(complete_json=complete_json)

@@ -124,8 +124,8 @@ CELERY_BROKER_URL = "redis://redis:6379"
 CELERY_RESULT_BACKEND = "redis://redis:6379"
 
 CELERY_BEAT_SCHEDULE = {
-    "fetch_and_store_metadata": {
-        "task": "videos.tasks.fetch_and_store_metadata",
+    "check_fetch_store_metadata": {
+        "task": "videos.tasks.check_fetch_store_metadata",
         "schedule": crontab(minute="*/1"),
     },
 }

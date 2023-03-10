@@ -5,7 +5,7 @@ from django.db.models import Q
 from django.views import generic
 
 from .models import Drm, Feature, Metadata
-from .tasks import fetch_and_store_metadata
+from .tasks import check_fetch_store_metadata
 
 
 class IndexView(generic.ListView):
@@ -46,7 +46,7 @@ class IndexView(generic.ListView):
         return context_data
 
     def get(self, request, *args, **kwargs):
-        fetch_and_store_metadata()
+        check_fetch_store_metadata()
         return super().get(request, *args, **kwargs)
 
 
