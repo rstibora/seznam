@@ -54,7 +54,7 @@ def check_fetch_store_metadata() -> None:
         # stays the same (postgres comparison wise), the object is the same. Otherwise, we got
         # a different object.
         # This is problematic as either the db will grow endlessly or objects will be deleted
-        # while still being observed (e.g. the details view).
+        # while still being observed (i.e. the details view).
         try:
             Metadata.objects.get(complete_json=complete_json)
             continue

@@ -1,4 +1,6 @@
+from functools import reduce
 import json
+import operator
 from typing import Any, Dict
 
 from django.db.models import Q
@@ -12,20 +14,18 @@ class IndexView(generic.ListView):
     template_name = "videos/index.html"
 
     def get_queryset(self):
+        # I suppose this should be somehow handled with Django forms.
         order_string = self.request.GET.get("order", "asc")
         order_prefix = "" if order_string == "asc" else "-"
-
         order_by = self.request.GET.get("order_by", "name")
-
         is_featured = self.request.GET.get("is_featured", None)
+
         drms = [drm.removeprefix("filter_drm_")
                 for drm in self.request.GET.keys() if drm.startswith("filter_drm_")]
         features = [feature.removeprefix("filter_feature_")
                     for feature in self.request.GET.keys() if feature.startswith("filter_feature_")]
 
         is_featured_q = Q(is_featured=True) if is_featured is not None else ~Q(pk__in=[])
-        drms_q = Q(drms__name__in=drms) if drms else ~Q(pk__in=[])
-        features_q = Q(features__name__in=features) if features else ~Q(pk__in=[])
 
         json_search = self.request.GET.get("json_search", None)
         json_search_q = ~Q(pk__in=[])
@@ -36,8 +36,12 @@ class IndexView(generic.ListView):
             except json.JSONDecodeError:
                 raise Exception(f"The query '{json_search}' was not correct.")
 
-        return Metadata.objects.all().filter(is_featured_q & drms_q & features_q & json_search_q).order_by(
-            f"{order_prefix}{order_by}")
+        result = Metadata.objects.all().filter(is_featured_q & json_search_q)
+        for drm in drms:
+            result = result.filter(drms__name=drm)
+        for feature in features:
+            result = result.filter(features__name=feature)
+        return result.distinct().order_by(f"{order_prefix}{order_by}")
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context_data = super().get_context_data(**kwargs)

@@ -7,8 +7,18 @@
 {% block content %}
 <div class="bg-slate-200 p-4 min-h-screen">
     <div class="flex flex-col max-w-[100em] mx-auto bg-white p-4 rounded drop-shadow">
-        <video src={{ object.manifest_uri }} class="w-full" crossorigin></video>
-        <div class="bg-slate-700 rounded text-slate-200 p-2">
+        <div>
+            <video class="w-full" id="videoPlayer" controls></video>
+        </div>
+        <script src="http://cdn.dashjs.org/latest/dash.all.min.js"></script>
+        <script>
+            (function(){
+                var url = "{{ object.manifest_uri }}";
+                var player = dashjs.MediaPlayer().create();
+                player.initialize(document.querySelector("#videoPlayer"), url, true);
+            })();
+        </script>
+        <div class="bg-slate-700 rounded text-slate-200 p-2 mt-4">
             <code>
                 {{ object.complete_json }}
             </code>
