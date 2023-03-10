@@ -1,14 +1,36 @@
-<table>
-    <tr>
-        <th>Name</th>
-        <th>Short Name</th>
-        <th>Description</th>
-    </tr>
-    {% for object in object_list %}
-        <tr>
-            <td>{{ object.name }}</td>
-            <td>{{ object.short_name }}</td>
-            <td>{{ object.description }}</td>
-        </tr>
-    {% endfor %}
-</table>
+{% extends "videos/base.html" %}
+
+{% block head %}
+    <title>Videos | Seznam</title>
+{% endblock head %}
+
+{% block content %}
+    <div class="bg-slate-200 p-4">
+        <div class="max-w-[100em] mx-auto bg-white p-4 rounded">
+            <table class="w-full">
+                <tr class="bg-slate-700 text-slate-200 p-2">
+                    <th></th>
+                    <th>
+                        Name
+                        <a href="{% url 'index' %}?sort_by=name&order=asc"> &uarr;</a>
+                        <a href="{% url 'index' %}?sort_by=name&order=desc"> &darr;</a>
+                    </th>
+                    <th>
+                        Short Name
+                        <a href="{% url 'index' %}?sort_by=short_name&order=asc"> &uarr;</a>
+                        <a href="{% url 'index' %}?sort_by=short_name&order=desc"> &darr;</a>
+                    </th>
+                    <th>Description</th>
+                </tr>
+                {% for video in object_list %}
+                    <tr class="bg-white odd:bg-slate-100 p-2">
+                        <td><img class="max-h-16" src="https://storage.googleapis.com/shaka-asset-icons/dark_truth.png"></td>
+                        <td>{{ video.name }}</td>
+                        <td>{{ video.short_name }}</td>
+                        <td>{{ video.description }}</td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+{% endblock content %}
