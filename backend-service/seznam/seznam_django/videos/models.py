@@ -9,6 +9,7 @@ class Drm(models.Model):
 
 
 class Metadata(models.Model):
+    """Video metadata."""
     name = models.CharField(max_length=2048)
     short_name = models.CharField(max_length=2048)
     icon_uri = models.CharField(max_length=2048)
@@ -20,8 +21,21 @@ class Metadata(models.Model):
     features = models.ManyToManyField('Feature')
     drms = models.ManyToManyField('Drm')
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["short_name"]),
+            models.Index(fields=["is_featured"]),
+            models.Index(fields=["complete_json"]),
+        ]
+
+    def save(self, *args, **kwargs) -> None:
+        self.description = self.description or ""
+        return super().save(*args, **kwargs)
+
 
 class FetchMetadata(models.Model):
+    """Metadata about the external api fetch. Singleton."""
     data_expires_at = models.DateTimeField(null=True)
 
     def save(self, *args, **kwargs) -> None:

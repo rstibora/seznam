@@ -19,10 +19,10 @@ class FetchFailed(Exception):
 
 class MetadataModel(BaseModel):
     name: str
-    short_name: str = Field(alias="shortName", default="")
-    icon_uri: str = Field(alias="iconUri", default="")
-    manifest_uri: str = Field(alias="manifestUri", default="")
-    descritption: str = ""
+    short_name: str = Field(alias="shortName")
+    icon_uri: str = Field(alias="iconUri")
+    manifest_uri: str = Field(alias="manifestUri")
+    description: str | None  = None
     is_featured: bool = Field(alias="isFeatured")
     drm: list[str]
     features: list[str]
@@ -34,13 +34,10 @@ def _update_metadata() -> None:
     if not response.ok:
         raise FetchFailed("Could not fetch videos metadata.")
 
-    try:
-        response_json = response.json()
-    except requests.exceptions.JSONDecodeError:
-        raise FetchFailed("Could not parse videos metadata json.")
-
+    response_json = response.json()
     video_metadata_models_and_jsons = [(MetadataModel.parse_obj(video_json), video_json)
-                                       for video_json in response_json]
+                                        for video_json in response_json]
+
 
     for video_metadata, complete_json in video_metadata_models_and_jsons:
         # Since there is no unique identifier in the json, it is assumed that if the json
@@ -55,13 +52,8 @@ def _update_metadata() -> None:
             features = (Feature.objects.get_or_create(name=feature)[0] for feature in video_metadata.features)
             drms = (Drm.objects.get_or_create(name=drm)[0] for drm in video_metadata.drm)
             metadata = Metadata.objects.create(
-                name=video_metadata.name,
-                short_name=video_metadata.short_name,
-                icon_uri=video_metadata.icon_uri,
-                manifest_uri=video_metadata.manifest_uri,
-                description=video_metadata.descritption,
-                is_featured=video_metadata.is_featured,
-                complete_json=complete_json)
+                complete_json=complete_json, **video_metadata.dict(exclude={"drm", "features"}))
+
             if features:
                 metadata.features.set(features)
             if drms:
@@ -81,7 +73,5 @@ def _update_metadata() -> None:
 def check_fetch_store_metadata() -> None:
     fetch_metadata = FetchMetadata.load()
 
-    # Data is fresh, no need to fetch.
-    if fetch_metadata.data_expires_at and fetch_metadata.data_expires_at > timezone.now():
-        return
-    _update_metadata()
+    if not fetch_metadata.data_expires_at or fetch_metadata.data_expires_at < timezone.now():
+        _update_metadata()

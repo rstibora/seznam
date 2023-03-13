@@ -4,7 +4,7 @@
 Secrets are commited for convenience (.env and Django secret in settings). Postgres is not mounted to host, so nothing important should be kept in it :)
 
 # Design
-I used Django and Postgres as that is the stack you use as I understood it. I am not sure if that is the ideal setup here, maybe it would be simpler to just dump the json into Redis and then reconstruct the objects for the presentation.
+I used Django and Postgres as that is the stack you use as I understood it. I am not sure if that is the ideal setup here, maybe it would be simpler to just dump the json into Redis and then reconstruct the objects for the presentation. Several days worth of jsons could be kept and there could be some sort of rediretion to the latest to prevent issues with data refresh while being observed.
 
 I found it surprisingly hard to schedule a regular task for containerized Django.
 
