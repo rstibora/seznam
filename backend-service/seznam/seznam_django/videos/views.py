@@ -1,13 +1,14 @@
 from functools import reduce
 import json
-import operator
 from typing import Any, Dict
 
 from django.db.models import Q
 from django.views import generic
+from rest_framework import viewsets
 
-from .models import Drm, Feature, Metadata
-from .tasks import check_fetch_store_metadata
+from videos.models import Drm, Feature, Metadata
+from videos.serializers import DrmSerializer, FeatureSerializer, FullMetadataSerializer, MetadataSerializer
+from videos.tasks import check_fetch_store_metadata
 
 
 class IndexView(generic.ListView):
@@ -57,3 +58,23 @@ class IndexView(generic.ListView):
 class DetailView(generic.DetailView):
     model = Metadata
     template_name = "videos/detail.html"
+
+
+class ApiDrmViewSet(viewsets.ModelViewSet):
+    queryset = Drm.objects.all()
+    serializer_class = DrmSerializer
+
+
+class ApiFeatureViewSet(viewsets.ModelViewSet):
+    queryset = Feature.objects.all()
+    serializer_class = FeatureSerializer
+
+
+class ApiMetadataViewSet(viewsets.ModelViewSet):
+    queryset = Metadata.objects.all()
+    serializer_class = MetadataSerializer
+
+
+class ApiFullMetadataViewSet(viewsets.ModelViewSet):
+    queryset = Metadata.objects.all()
+    serializer_class = FullMetadataSerializer

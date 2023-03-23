@@ -35,8 +35,10 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'videos.apps.VideosConfig',
+    "rest_framework",
     'django.contrib.contenttypes',
     'django.contrib.staticfiles',
+    'django.contrib.auth',
 ]
 
 MIDDLEWARE = [
