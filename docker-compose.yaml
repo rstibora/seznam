@@ -7,6 +7,17 @@ services:
       - SEZNAM_DB_PASSWORD=${SEZNAM_DB_PASSWORD}
     ports:
     - 5432:5432
+
+  frontend:
+    build: ./frontend-service
+    volumes:
+      - ./frontend-service/svelte:/svelte/
+    command: bash -c "npm install --also-dev && npm run dev -- --host --port 3000"
+    depends_on:
+      - django
+    ports:
+      - 3000:3000
+
   django:
     build: ./backend-service
     image: seznam/backend
@@ -20,8 +31,10 @@ services:
     depends_on:
       - redis
       - db
+
   redis:
     image: redis:7
+
   celery:
     build: ./backend-service
     volumes:
@@ -31,6 +44,7 @@ services:
       - redis
     environment:
       - SEZNAM_DB_PASSWORD=${SEZNAM_DB_PASSWORD}
+
   celery-beat:
     build: ./backend-service
     volumes:
