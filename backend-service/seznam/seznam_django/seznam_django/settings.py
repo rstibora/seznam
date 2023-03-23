@@ -134,6 +134,7 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
+# Set up so that Svelte in browser can fetch data directly from Django API.
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000"
 ]

@@ -3,10 +3,10 @@ from datetime import datetime, timedelta, timezone
 from celery import shared_task
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
-from pydantic import BaseModel, Field
 import requests
 
 from videos.models import Drm, Feature, FetchMetadata, Metadata
+from videos.serializers import FullMetadataSerializer
 
 
 VIDEOS_URL = ("https://gist.githubusercontent.com/nextsux/f6e0327857c88caedd2dab13affb72c1"
@@ -17,48 +17,25 @@ class FetchFailed(Exception):
     pass
 
 
-class MetadataModel(BaseModel):
-    name: str
-    short_name: str = Field(alias="shortName")
-    icon_uri: str = Field(alias="iconUri")
-    manifest_uri: str = Field(alias="manifestUri")
-    description: str | None  = None
-    is_featured: bool = Field(alias="isFeatured")
-    drm: list[str]
-    features: list[str]
-
-
 def _update_metadata() -> None:
     response = requests.get(VIDEOS_URL)
 
     if not response.ok:
         raise FetchFailed("Could not fetch videos metadata.")
 
-    response_json = response.json()
-    video_metadata_models_and_jsons = [(MetadataModel.parse_obj(video_json), video_json)
-                                        for video_json in response_json]
-
-
-    for video_metadata, complete_json in video_metadata_models_and_jsons:
+    for video_metadata in response.json():
         # Since there is no unique identifier in the json, it is assumed that if the json
         # stays the same (postgres comparison wise), the object is the same. Otherwise, we got
         # a different object.
         # This is problematic as either the db will grow endlessly or objects will be deleted
         # while still being observed (i.e. the details view).
+        deserialized_metadata = FullMetadataSerializer(data=video_metadata)
+        deserialized_metadata.is_valid(raise_exception=True)
         try:
-            Metadata.objects.get(complete_json=complete_json)
-            continue
+             Metadata.objects.get(complete_json=video_metadata)
+             continue
         except ObjectDoesNotExist:
-            features = (Feature.objects.get_or_create(name=feature)[0] for feature in video_metadata.features)
-            drms = (Drm.objects.get_or_create(name=drm)[0] for drm in video_metadata.drm)
-            metadata = Metadata.objects.create(
-                complete_json=complete_json, **video_metadata.dict(exclude={"drm", "features"}))
-
-            if features:
-                metadata.features.set(features)
-            if drms:
-                metadata.drms.set(drms)
-            metadata.save()
+            deserialized_metadata.save()
 
     fetch_metadata = FetchMetadata.load()
     fetch_metadata.data_expires_at = timezone.now() + timedelta(minutes=5)
@@ -73,5 +50,5 @@ def _update_metadata() -> None:
 def check_fetch_store_metadata() -> None:
     fetch_metadata = FetchMetadata.load()
 
-    if not fetch_metadata.data_expires_at or fetch_metadata.data_expires_at < timezone.now():
-        _update_metadata()
+    # if not fetch_metadata.data_expires_at or fetch_metadata.data_expires_at < timezone.now():
+    _update_metadata()
