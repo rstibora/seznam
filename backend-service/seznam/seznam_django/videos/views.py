@@ -1,4 +1,3 @@
-from functools import reduce
 import json
 from typing import Any, Dict
 
@@ -73,6 +72,11 @@ class ApiFeatureViewSet(viewsets.ModelViewSet):
 class ApiMetadataViewSet(viewsets.ModelViewSet):
     queryset = Metadata.objects.all()
     serializer_class = MetadataSerializer
+
+    def get_queryset(self):
+        is_featured = self.request.query_params.get('is_featured') == "on"
+        search = self.request.query_params.get('search') or ""
+        return Metadata.objects.all().filter(is_featured=is_featured, name__contains=search)
 
 
 class ApiFullMetadataViewSet(viewsets.ModelViewSet):

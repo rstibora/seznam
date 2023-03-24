@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 import requests
 
-from videos.models import Drm, Feature, FetchMetadata, Metadata
+from videos.models import FetchMetadata, Metadata
 from videos.serializers import FullMetadataSerializer
 
 
@@ -50,5 +50,5 @@ def _update_metadata() -> None:
 def check_fetch_store_metadata() -> None:
     fetch_metadata = FetchMetadata.load()
 
-    # if not fetch_metadata.data_expires_at or fetch_metadata.data_expires_at < timezone.now():
-    _update_metadata()
+    if not fetch_metadata.data_expires_at or fetch_metadata.data_expires_at < timezone.now():
+        _update_metadata()

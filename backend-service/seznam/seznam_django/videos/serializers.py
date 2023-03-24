@@ -1,8 +1,6 @@
-from django.core.exceptions import ObjectDoesNotExist
-from rest_framework import serializers, validators
+from rest_framework import serializers
 
 from videos.models import Drm, Feature, Metadata
-
 
 
 class DrmSerializer(serializers.HyperlinkedModelSerializer):
@@ -68,4 +66,4 @@ class FullMetadataSerializer(serializers.HyperlinkedModelSerializer):
 class MetadataSerializer(FullMetadataSerializer):
     class Meta:
         model = Metadata
-        fields = ["url", "name", "features", "drms"]
+        fields = ["id", "url", "name", "features", "drms", "short_name", "is_featured"]

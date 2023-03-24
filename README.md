@@ -3,6 +3,8 @@
 
 Secrets are commited for convenience (.env and Django secret in settings). Postgres is not mounted to host, so nothing important should be kept in it :)
 
+Django rendered frontend runs on port 8000, Svelte that consumes DRF API on port 3000.
+
 # Design
 I used Django and Postgres as that is the stack you use as I understood it. I am not sure if that is the ideal setup here, maybe it would be simpler to just dump the json into Redis and then reconstruct the objects for the presentation. Several days worth of jsons could be kept and there could be some sort of rediretion to the latest to prevent issues with data refresh while being observed.
 
